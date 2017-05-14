@@ -3,7 +3,7 @@
 namespace rjapi\helpers;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Http\Request;
+use Request;
 use League\Fractal\Manager;
 use League\Fractal\Resource\Collection;
 use League\Fractal\Resource\Item;
@@ -56,20 +56,25 @@ class Json
     public static function getRelations($relation, string $entity)
     {
         $jsonArr = [];
-        if($relation instanceof \Illuminate\Database\Eloquent\Collection) {
+        if($relation instanceof \Illuminate\Database\Eloquent\Collection)
+        {
             $cnt = count($relation);
-            if($cnt > 1) {
-                foreach($relation as $v) {
+            if($cnt > 1)
+            {
+                foreach($relation as $v)
+                {
                     $attrs = $v->getAttributes();
                     $jsonArr[] = [RamlInterface::RAML_TYPE => $entity,
-                                  RamlInterface::RAML_ID   => $attrs[RamlInterface::RAML_ID]];
+                        RamlInterface::RAML_ID   => $attrs[RamlInterface::RAML_ID]];
                 }
             }
-            else {
-                foreach($relation as $v) {
+            else
+            {
+                foreach($relation as $v)
+                {
                     $attrs = $v->getAttributes();
                     $jsonArr = [RamlInterface::RAML_TYPE => $entity,
-                                RamlInterface::RAML_ID   => $attrs[RamlInterface::RAML_ID]];
+                        RamlInterface::RAML_ID   => $attrs[RamlInterface::RAML_ID]];
                 }
             }
         }
@@ -84,7 +89,8 @@ class Json
     public static function outputErrors(array $errors)
     {
         $arr[JSONApiInterface::CONTENT_ERRORS] = [];
-        if(empty($errors) === false) {
+        if(empty($errors) === false)
+        {
             $arr[JSONApiInterface::CONTENT_ERRORS] = $errors;
         }
         echo self::encode($arr);
@@ -114,23 +120,17 @@ class Json
      * @param string $entity
      * @param bool $isCollection
      *
-     * @param array $meta
      * @return Collection|Item
      */
-    public static function getResource(BaseFormRequest $middleware, $model, string $entity, bool $isCollection = false, array $meta = [])
+    public static function getResource(BaseFormRequest $middleware, $model, string $entity, $isCollection = false)
     {
         $transformer = new DefaultTransformer($middleware);
-        if($isCollection === true) {
-            $collection = new Collection($model, $transformer, strtolower($entity));
-            if(empty($meta) === false) {
-                $collection->setMeta($meta);
-            }
-
-            return $collection;
+        if($isCollection === true)
+        {
+            return new Collection($model, $transformer, strtolower($entity));
         }
-        $item = new Item($model, $transformer, strtolower($entity));
-        $item->setMeta($meta);
-        return $item;
+
+        return new Item($model, $transformer, strtolower($entity));
     }
 
     /**
@@ -143,17 +143,26 @@ class Json
     {
         http_response_code($responseCode);
         header(JSONApiInterface::HEADER_CONTENT_TYPE . JSONApiInterface::HEADER_CONTENT_TYPE_VALUE);
-        if($responseCode === JSONApiInterface::HTTP_RESPONSE_CODE_NO_CONTENT) {
+        if($responseCode === JSONApiInterface::HTTP_RESPONSE_CODE_NO_CONTENT)
+        {
             exit;
         }
         $host = $_SERVER['HTTP_HOST'];
         $manager = new Manager();
 
-        if(isset($_GET['include'])) {
+
+        if(isset($_GET['include']))
+        {
             $manager->parseIncludes($_GET['include']);
+
         }
+
+
         $manager->setSerializer(new JsonApiSerializer($host));
+//        dd($data);
+
         echo self::getSelectedData($manager->createData($resource)->toJson(), $data);
+
         exit(JSONApiInterface::EXIT_STATUS_SUCCESS);
     }
 
@@ -167,7 +176,7 @@ class Json
     }
 
     /**
-     * @param mixed $json
+     * @param string|resource $json
      * @return mixed
      */
     public static function decode($json)
@@ -182,16 +191,26 @@ class Json
      */
     private static function getSelectedData(string $json, array $data): string
     {
-        if(current($data) === PhpInterface::ASTERISK) {// do nothing - grab all fields
+
+        if(current($data) === PhpInterface::ASTERISK)
+        {// do nothing - grab all fields
             return $json;
         }
+
         $jsonArr = self::decode($json);
         $current = current($jsonArr[RamlInterface::RAML_DATA]);
-        if(empty($current[JSONApiInterface::CONTENT_ATTRIBUTES]) === false) {// this is an array of values
+
+        if(empty($current[JSONApiInterface::CONTENT_ATTRIBUTES]) === false)
+        {// this is an array of values
+
             self::unsetArray($jsonArr, $data);
         }
-        else {// this is just one element
-            self::unsetObject($jsonArr, $data);
+        else
+        {// this is just one element
+            if (empty($jsonArr) !== false){
+                self::unsetObject($jsonArr, $data);
+            }
+
         }
 
         return self::encode($jsonArr);
@@ -202,27 +221,75 @@ class Json
      * @param array &$json
      * @param array $data
      */
+
+    ///TODO check if we messed up something
+//    private static function unsetArray(array &$json, array $data)
+//    {
+//        foreach($json as &$jsonObject)
+//        {
+//            foreach($jsonObject as &$v)
+//            {
+//                foreach($v[JSONApiInterface::CONTENT_ATTRIBUTES] as $key => $attr)
+//                {
+//                    if(in_array($key, $data) === false)
+//                    {
+//                        unset($v[JSONApiInterface::CONTENT_ATTRIBUTES][$key]);
+//                    }
+//                }
+//            }
+//        }
+//    }
+
+
     private static function unsetArray(array &$json, array $data)
     {
-        foreach($json as &$jsonObject) {
-            foreach($jsonObject as &$v) {
-                foreach($v[JSONApiInterface::CONTENT_ATTRIBUTES] as $key => $attr) {
-                    if(in_array($key, $data) === false) {
+
+        //working code
+        $array =[];
+        foreach ($data as $oneData)
+        {
+            if(str_contains($oneData,'include.')) {
+
+                $value = str_replace('include.','',$oneData);
+                $array = array_prepend($array,$value);
+            }
+            else {
+
+                $array = array_prepend($array, $oneData);
+            }
+
+        }
+
+
+        foreach($json as &$jsonObject)
+        {
+
+            foreach($jsonObject as &$v)
+            {
+                foreach($v[JSONApiInterface::CONTENT_ATTRIBUTES] as $key => $attr)
+                {
+
+
+                    if(in_array($key, $array) === false)
+                    {
                         unset($v[JSONApiInterface::CONTENT_ATTRIBUTES][$key]);
                     }
                 }
             }
         }
+
     }
 
     /**
      * @param array $json
      * @param array $data
      */
-    private static function unsetObject(array &$json, array $data)
+    private function unsetObject(array &$json, array $data)
     {
-        foreach($json[JSONApiInterface::CONTENT_DATA][JSONApiInterface::CONTENT_ATTRIBUTES] as $k => $v) {
-            if(in_array($k, $data) === false) {
+        foreach($json[JSONApiInterface::CONTENT_DATA][JSONApiInterface::CONTENT_ATTRIBUTES] as $k => $v)
+        {
+            if(in_array($k, $data) === false)
+            {
                 unset($json[JSONApiInterface::CONTENT_DATA][JSONApiInterface::CONTENT_ATTRIBUTES][$k]);
             }
         }
