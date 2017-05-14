@@ -8,7 +8,7 @@
 ![alt Laravel logo](https://github.com/RJAPI/raml-json-api/blob/master/tests/images/laravel-logo-white.png)
 ![alt JSON API logo](https://github.com/RJAPI/raml-json-api/blob/master/tests/images/jsonapi.png)
 
-RAML-JSON-API PHP-code generator (based on RAML-types) for Laravel framework, with complete support of JSON-API data format 
+R1AML-JSON-API PHP-code generator (based on RAML-types) for Laravel framework, with complete support of JSON-API data format 
 
 JSON API support turned on by default - see `Turn off JSON API support` section bellow 
 
