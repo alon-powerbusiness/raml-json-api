@@ -19,7 +19,7 @@ class Jwt
         ->setNotBefore(time() + ConfigHelper::getJwtParam(ConfigInterface::ACTIVATE)) // Configures the time that the token can be used (nbf claim)
         ->setExpiration(time() + ConfigHelper::getJwtParam(ConfigInterface::EXPIRES)) // Configures the expiration time of the token (nbf claim)
         ->set('uid', $uid) // Configures a new claim, called "uid"
-        ->sign($signer, $generatedId . $uid) // glue uniqid + uid
+        ->sign($signer, $generatedId . getenv('JWT_SECRET') . $uid) // glue uniqid + uid
         ->getToken();
     }
 
@@ -29,6 +29,9 @@ class Jwt
         $data->setIssuer($_SERVER['HTTP_HOST']);
         $data->setAudience($_SERVER['HTTP_HOST']);
         $data->setId($generatedId);
-        return $token->validate($data);
+        $signer = new Sha256();
+        $uid    = $token->getClaim('uid');
+
+        return $token->validate($data) && $token->verify($signer, $generatedId .  getenv('JWT_SECRET') . $uid);
     }
 }

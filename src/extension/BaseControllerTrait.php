@@ -2,10 +2,7 @@
 namespace rjapi\extension;
 
 use Carbon\Carbon;
-use App\Helpers\Configurations;
-use App\Helpers\CreateJsonTemplate;
-use App\Helpers\SceneConfigurations;
-use App\Helpers\Transitions;
+
 use Codeception\Lib\Connector\Guzzle;
 use Faker\Provider\cs_CZ\DateTime;
 use Google\Cloud\BigQuery\Job;
@@ -17,8 +14,6 @@ use Illuminate\Routing\Route;
 use League\Flysystem\Exception;
 use League\Fractal\Resource\Collection;
 use Modules\V1\Entities\Gallery;
-use Modules\V1\Entities\Template;
-use Modules\V1\Entities\UserVideos;
 //use Psy\Configuration;
 use rjapi\helpers\ConfigOptions;
 use rjapi\helpers\Jwt;
@@ -160,19 +155,7 @@ trait BaseControllerTrait
         $this->setDefaults();
         $this->setConfigOptions();
     }
-    public function jwtCheck(Request $request){
 
-        try{
-
-            $token = (new Parser())->parse((string)$request->jwt);
-            $id = $token->getClaim("uid");
-            return 'ok';
-        }catch(\Exception $ex){
-            return response()->json([
-                "data" => ["type" => "error", "attributes" => ["title" => "Error", "desc" => "Fatal Error."]]
-            ], 401);
-        }
-    }
 
     public function refresh(Request $request )
     {
@@ -270,89 +253,6 @@ trait BaseControllerTrait
     }
 
 
-
-
-    public function getTemplatesList(Request $request)
-    {
-        $sqlOptions = $this->setSqlOptions($request);
-
-//            $filter=[['user_id','=', $this->model->user_id]];
-
-        $data=["id","include.title","category_template_id","updated_at","title","description","thumbnail_url","example_vid_url"];
-
-
-        //  $sqlOptions->setFilter($filter);
-        $sqlOptions->setData($data);
-
-
-
-
-
-        $items = $this->getAllEntities($sqlOptions);
-
-        //$this->setRelationships($items, 2, true);
-
-//        dd($this->getAttributes());
-        $resource = Json::getRelations($items, 'category_template');
-
-
-//        dd($resource);
-
-
-        $resource = Json::getResource($this->middleWare, $items, $this->entity, true);
-        //dd($resource);
-//        dd($resource);
-        Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_OK, $sqlOptions->getData());
-
-
-    }
-
-
-    /**
-     * GET Output all entries for this Entity with page/limit pagination support
-     *
-     * @param Request $request
-     */
-
-    public function getUserVideo(Request $request, string $id)
-    {
-
-        if ($request->jwt) {
-            $sqlOptions = $this->setSqlOptions($request);
-            $token = (new Parser())->parse((string)$request->jwt);
-
-
-
-            $this->model->user_id = $token->getClaim("uid");
-
-            $filter=[['user_id','=', $this->model->user_id],['guid','=',$id]];
-
-            //$data=["id","user_id","template_id","include.title","include.input_view","include.thumbnail_url"];
-
-
-
-            $sqlOptions->setFilter($filter);
-            //$sqlOptions->setData($data);
-
-
-
-            $items = $this->getAllEntities($sqlOptions);
-
-            $resource = Json::getResource($this->middleWare, $items, $this->entity, true);
-            //dd($resource);
-
-            Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_OK, $sqlOptions->getData());
-
-        } else {
-            return response()->json([
-                "data" => ["type" => "error", "attributes" => ["title" => "Error", "desc" => "Email or Password is invalid."]]
-            ], 401);
-
-        }
-    }
-
-
-
     public function getRenderSubQueueCount(Request $request)
     {
 
@@ -391,7 +291,6 @@ trait BaseControllerTrait
     }
 
 
-
     public function getRenderActiveQueueCount(Request $request)
     {
 
@@ -403,7 +302,7 @@ trait BaseControllerTrait
 
 //            $this->model->user_id = $token->getClaim("uid");
 
-        $filter=[['status','>', 0],['status','<',8]];
+        $filter=[['status','>', 0],['status','<',6]];
 
         //$data=["id","user_id","template_id","include.title","include.input_view","include.thumbnail_url"];
 
@@ -416,7 +315,7 @@ trait BaseControllerTrait
         $items = $this->getAllEntities($sqlOptions);
 
 
-        if (count($items) == 0) {
+        if (count($items) < 2) {
             $filter=[['status','=', 0]];
             $sortby = ['id'=>'asc'];
 
@@ -467,8 +366,6 @@ trait BaseControllerTrait
     }
 
 
-
-
     //get duration for active queue render
     public function getRenderActiveAndQueueDurationSum(Request $request)
     {
@@ -476,7 +373,7 @@ trait BaseControllerTrait
         $sqlOptions = $this->setSqlOptions($request);
 
 
-        $filter=[['status','>=', 0],['status','<',8]];
+        $filter=[['status','>=', 0],['status','<',6]];
 
         $data=["duration_fps"];
 
@@ -493,8 +390,6 @@ trait BaseControllerTrait
     }
 
 
-
-
     public function updateQueuePhantomJSCount(Request $request)
     {
 
@@ -507,195 +402,6 @@ trait BaseControllerTrait
 
     }
 
-
-
-
-
-
-    public function userVideos(Request $request)
-    {
-
-        //  dd();
-        if ($request->jwt) {
-            $sqlOptions = $this->setSqlOptions($request);
-            $token = (new Parser())->parse((string)$request->jwt);
-
-
-
-
-            $this->model->user_id = $token->getClaim("uid");
-
-            $filter=[['user_id','=', $this->model->user_id]];
-
-            $data=["id","template_id","guid","include.title","include.category_template_id","include.thumbnail_url","include.description"];
-
-
-            //  $sqlOptions->setFilter($filter);
-
-
-
-            //$data=["id","user_id","template_id","include.title","include.input_view","include.thumbnail_url"];
-//           $sqlOptions->setData($data);
-            $sqlOptions->setFilter($filter);
-
-
-//            $data=["id","guid","updated_at"];
-
-
-            //  $sqlOptions->setFilter($filter);
-            $sqlOptions->setData($data);
-
-
-
-            $items = $this->getAllEntities($sqlOptions);
-
-//            $resource = Json::getRelations($items, 'template');
-//            dd($resource);
-
-            $resource = Json::getResource($this->middleWare, $items, $this->entity, true);
-//            dd($resource);
-
-//            dd($sqlOptions->getData());
-            Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_OK, $sqlOptions->getData());
-
-        } else {
-            return response()->json([
-                "data" => ["type" => "error", "attributes" => ["title" => "Error", "desc" => "Email or Password is invalid."]]
-            ], 401);
-
-        }
-    }
-
-    public function GetMasterScenes(Request $request)
-    {
-        $templateId = (json_decode($request->getContent())->data->attributes)->template_id;
-        $template = Template::find($templateId);
-
-        $template = (\GuzzleHttp\json_decode($template["attributes"]["master_scenes"])->scene_images);
-
-        return response()->json([
-            "data" => ["type" => "GetMasterScenes", "attributes" => ["title" => "Success", "desc" => $template]]
-        ], 200);
-    }
-
-    public function addMasterScenesToJson(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-
-        $templateId = (json_decode($request->getContent())->data->attributes)->template_id;
-        $sceneId = (json_decode($request->getContent())->data->attributes)->scene_id;
-        $indexTo = (json_decode($request->getContent())->data->attributes)->index_to;
-        $template_json =json_decode($jsonApiAttributes->template_json);
-
-        $template = Template::find($templateId);
-
-        $template = (($template["attributes"]));
-        $duplicated = new SceneConfigurations();
-        $master_scenes = \GuzzleHttp\json_decode($template["master_scenes"]);
-
-        $duplicated =  $duplicated->duplicateFromMasterJsToMyJs($template_json, $master_scenes , $sceneId, $indexTo);
-
-//        echo(\GuzzleHttp\json_encode($duplicated[0]));
-//        dd();
-        return response()->json([
-            "data" => ["type" => "addMasterScenesToJson", "attributes" => ["title" => "Success", "desc" =>  [json_encode($duplicated[0]),
-                $master_scenes->scene_images[0]->{$sceneId},
-                $master_scenes->scenes->{$sceneId}->form_schema,$master_scenes->scenes->
-                {$sceneId}->form_default_data,$master_scenes->scenes->{$sceneId}->form_uiSchema,$duplicated[1],$duplicated[2]]]]
-
-        ],200);
-
-    }
-
-
-
-    public function userVideosUpdate(Request $request, $id)
-    {
-
-
-        if ($request->jwt) {
-
-
-            $json = Json::decode($request->getContent());
-            $jsonApiAttributes = Json::getAttributes($json);
-
-            // dd($request->input('data'));
-//
-//            return response()->json([
-//                "data" => ["type" => "userVideos", "attributes" => ["title" => "Error", "desc" => $request->getContent()]]
-//            ], 200);
-
-            Log::info('User failed to login.', ['$request' => $request]);
-
-            $sqlOptions = $this->setSqlOptions($request,false);
-
-
-
-
-
-            $token = (new Parser())->parse((string)$request->jwt);
-
-            $filter=[['user_id','=', $token->getClaim("uid")],['guid','=',$id]];
-
-            $sqlOptions->setFilter($filter);
-
-            $items = $this->getAllEntities($sqlOptions);
-            $model = $items->first();
-            //dd($model->user_id);
-
-            if($model->user_id  != $token->getClaim("uid"))
-            {
-                return response()->json([
-                    "data" => ["type" => "error", "attributes" => ["title" => "Error", "desc" => "Email or Password is invalid."]]
-                ], 401);
-            }
-            else { // standard processing
-                foreach ($this->props as $k => $v) {
-                    // request fields should match Middleware fields
-                    if (empty($jsonApiAttributes[$k]) === false) {
-                        $model->$k = $jsonApiAttributes[$k];
-                    }
-                }
-
-                $model->save();
-                $this->setRelationships($json, $model->id, true);
-                $resource = Json::getResource($this->middleWare, $model, $this->entity);
-                Json::outputSerializedData($resource);
-//            }
-            }
-
-
-
-        } else {
-            return response()->json([
-                "data" => ["type" => "error", "attributes" => ["title" => "Error", "desc" => "Email or Password is invalid."]]
-            ], 401);
-
-        }
-
-    }
-
-    public function JsonRequest(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-
-        $images = new CreateJsonTemplate();
-
-        $videos = new CreateJsonTemplate();
-
-        $videos =  $videos->uploadVideosForSchema($jsonApiAttributes->dir_url_videos);
-
-
-        $images =  $images->uploadImagesForSchema($jsonApiAttributes->dir_url_images);
-
-        $createJson = new CreateJsonTemplate();
-
-
-
-        $createJson =  $createJson->createJson($jsonApiAttributes->template_json,$images, $videos);
-    }
 
     // compare the user id and the firebase id and return all the matches
     public function FCMCompare(Request $request, int $id)
@@ -734,44 +440,8 @@ trait BaseControllerTrait
 
     }
 
-    public function genereateGuid(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-        $guid = $jsonApiAttributes->guid;
 
-        $guid = bcrypt($guid);
-
-        return response()->json([
-            "data" => ["type" => "guidResult", "attributes" => ["title" => "Success", "desc" => $guid]]
-        ],200);
-
-
-    }
-
-
-    public function MasterJsonRequest(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        $images = new CreateJsonTemplate();
-
-        $videos = new CreateJsonTemplate();
-
-        $videos =  $videos->uploadVideosForSchema($jsonApiAttributes->dir_url_videos);
-
-        $images =  $images->uploadImagesForSchema($jsonApiAttributes->dir_url_images);
-
-        //dd($images[1]->getContents());
-
-
-        $duplicated = new CreateJsonTemplate();
-
-        $duplicated =  $duplicated->createMasterJson($jsonApiAttributes->template_json,$images, $videos);
-
-        return response()->json($duplicated);
-    }
-
-
+    //native notification
     public function createFCM(Request $request)
     {
 
@@ -835,430 +505,6 @@ trait BaseControllerTrait
 
     }
 
-
-
-    public function Move(Request $request){
-
-
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        //$template = json_decode($jsonApiAttributes->template_json);
-        $sceneFrom = $jsonApiAttributes->sceneFrom;
-        $sceneTo = $jsonApiAttributes->sceneTo;
-        $beforeOrAfter = $jsonApiAttributes->beforeOrAfter;
-
-        $duplicated = new SceneConfigurations();
-
-        $duplicated =  $duplicated->moveScene($jsonApiAttributes->template_json,$sceneFrom,$sceneTo,$beforeOrAfter);
-
-        $result = json_encode($duplicated[0]);
-        $diffTime = $duplicated[1];
-        $difLastScene = $duplicated[2];
-//        $copiedSceneIndex = $duplicated[2];
-        //dd($result);
-
-        return response()->json([
-            "data" => ["type" => "moveResult", "attributes" => ["title" => "Success", "desc" => [$result,$diffTime,$difLastScene]]]
-        ],200);
-    }
-
-    public function changeImagePosition(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        $template = json_decode($jsonApiAttributes->template_json);
-
-        $imgId = $jsonApiAttributes->imgId;
-        $width = $jsonApiAttributes->width;
-        $height = $jsonApiAttributes->height;
-
-
-        $newTemplateJson = new Configurations();
-
-        $newTemplateJson =  $newTemplateJson->changeImagePosition($template,$imgId,$width,$height);
-
-        $result = json_encode($newTemplateJson);
-
-
-        return response()->json([
-            "data" => ["type" => "changeImagePositionResult", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-    }
-
-
-    public function Transitions(Request $request)
-    {
-
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        //$template = json_decode($jsonApiAttributes->template_json);
-
-        $firstSceneName = $jsonApiAttributes->first_scene;
-        $secondSceneName = $jsonApiAttributes->second_scene;
-        $transition = $jsonApiAttributes->transition;
-
-
-        $newTemplateJson = new Transitions();
-
-        $newTemplateJson =  $newTemplateJson->AddTransition($jsonApiAttributes->template_json,$firstSceneName,$secondSceneName,$transition,null);
-
-        $result = $newTemplateJson;
-//        dd(($result));
-
-
-
-        return response()->json([
-            "data" => ["type" => "addTransitionResult", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-    }
-
-    public function removeTransition(Request $request){
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        //$template = json_decode($jsonApiAttributes->template_json);
-
-        $firstSceneName = $jsonApiAttributes->first_scene;
-        $secondSceneName = $jsonApiAttributes->second_scene;
-        $transition = $jsonApiAttributes->transition;
-
-        $newTemplateJson = new Transitions();
-
-        //$myJs,$firstSceneName,$secondSceneName,$transition
-        $newTemplateJson =  $newTemplateJson->RemoveTransition($jsonApiAttributes->template_json,$firstSceneName,$secondSceneName,$transition);
-
-        $result = $newTemplateJson;
-
-        return response()->json([
-            "data" => ["type" => "transitionResult", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-    }
-
-    public function changeDifOverlapping(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        //$template = json_decode($jsonApiAttributes->template_json);
-
-        $firstSceneName = $jsonApiAttributes->firstSceneName;
-        $secondSceneName = $jsonApiAttributes->secondSceneName;
-        $difOverlapping = $jsonApiAttributes->difOverlapping;
-
-
-        $newTemplateJson = new Transitions();
-
-        $newTemplateJson =  $newTemplateJson->changeDifOverlapping($jsonApiAttributes->template_json,$firstSceneName,$secondSceneName,$difOverlapping);
-
-        $result = $newTemplateJson;
-
-
-
-
-        return response()->json([
-            "data" => ["type" => "transitionResult", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-    }
-
-    public function moveTransition(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        //$template = json_decode($jsonApiAttributes->template_json);
-
-        $sceneBeforeTo = $jsonApiAttributes->sceneBeforeTo;
-        $sceneAfterTo = $jsonApiAttributes->sceneAfterTo;
-
-        $sceneBeforeFrom = $jsonApiAttributes->sceneBeforeFrom;
-        $sceneAfterFrom = $jsonApiAttributes->sceneAfterFrom;
-
-        $transition = $jsonApiAttributes->transition;
-
-        $newTemplateJson = new Transitions();
-
-        $newTemplateJson =  $newTemplateJson->moveTransition($jsonApiAttributes->template_json,$sceneBeforeTo,$sceneAfterTo, $sceneBeforeFrom, $sceneAfterFrom, $transition);
-
-        $result = $newTemplateJson;
-//        dd(($result));
-
-
-
-        return response()->json([
-            "data" => ["type" => "transitionResult", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-    }
-
-    public function singleTransitions(Request $request)
-    {
-        $jsonApiAttributes = json_decode($request->getContent())->data->attributes;
-        //   $jsonApiAttributes = (($request->getContent())->data);
-//dd(json_decode($request->getContent())->data->attributes);
-        //$template = json_decode($jsonApiAttributes->template_json);
-
-        $SceneName = $jsonApiAttributes->scene_name;
-
-        $transition = $jsonApiAttributes->transition;
-        $transitionFrom = $jsonApiAttributes->transition_from;
-
-        $newTemplateJson = new Transitions();
-
-        $newTemplateJson =  $newTemplateJson->AddSingleTransition($jsonApiAttributes->template_json,$SceneName,$transition, $transitionFrom, null);
-
-        $result = $newTemplateJson;
-        //dd(($result));
-
-
-
-        return response()->json([
-            "data" => ["type" => "transitionResult", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-    }
-
-    public function RemoveSingleTransition(Request $request)
-    {
-        $jsonApiAttributes = json_decode($request->getContent())->data->attributes;
-        //   $jsonApiAttributes = (($request->getContent())->data);
-//dd(json_decode($request->getContent())->data->attributes);
-        //$template = json_decode($jsonApiAttributes->template_json);
-
-        $SceneName = $jsonApiAttributes->scene_name;
-
-        $transition = $jsonApiAttributes->transition;
-        $removeFrom = $jsonApiAttributes->removeFrom;
-
-        $newTemplateJson = new Transitions();
-
-        $newTemplateJson =  $newTemplateJson->RemoveSingleTransition($jsonApiAttributes->template_json,$SceneName,$transition, $removeFrom);
-
-        $result = $newTemplateJson;
-        //dd(($result));
-
-
-
-        return response()->json([
-            "data" => ["type" => "transitionResult", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-    }
-
-    public function changeImagesJson(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        $template = json_decode($jsonApiAttributes->template_json);
-
-        $imgId = $jsonApiAttributes->imgId;
-        $width = $jsonApiAttributes->width;
-        $height = $jsonApiAttributes->height;
-        $originalWidth = $jsonApiAttributes->originalWidth;
-        $originalHeight = $jsonApiAttributes->originalHeight;
-
-        $newTemplateJson = new Configurations();
-
-        $newTemplateJson =  $newTemplateJson->changeImagesJson($template,$imgId,$width,$height,$originalWidth,$originalHeight);
-
-        $result = json_encode($newTemplateJson);
-        //dd(($result));
-
-
-
-        return response()->json([
-            "data" => ["type" => "changeImagesJsonResult", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-    }
-
-
-    public function scaleImage(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        $template = json_decode($jsonApiAttributes->template_json);
-
-        $imgId = $jsonApiAttributes->imgId;
-        $width = $jsonApiAttributes->width;
-        $height = $jsonApiAttributes->height;
-
-        $newTemplateJson = new Configurations();
-
-        $newTemplateJson =  $newTemplateJson->scaleImage($template,$imgId,$width,$height);
-
-        $result = json_encode($newTemplateJson);
-
-
-
-        return response()->json([
-            "data" => ["type" => "scaleImage", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-
-    }
-
-    public function changeTextColor(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        $template = json_decode($jsonApiAttributes->template_json);
-        $sceneProperty = $jsonApiAttributes->sceneProperty;
-
-        $color = $jsonApiAttributes->color;
-
-
-        $configurations = new Configurations();
-
-        $configurations =  $configurations->ChangeTextColor($template,$sceneProperty,$color);
-
-        $result = json_encode($configurations);
-
-
-
-
-        return response()->json([
-            "data" => ["type" => "changeTextColorResult", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-    }
-
-    public function changeTextSize(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        $template = json_decode($jsonApiAttributes->template_json);
-        $sceneProperty = $jsonApiAttributes->sceneProperty;
-
-        $size = $jsonApiAttributes->size;
-
-
-        $configurations = new Configurations();
-
-        $configurations =  $configurations->ChangeTextSize($template,$sceneProperty,$size);
-
-        $result = json_encode($configurations);
-
-
-
-
-        return response()->json([
-            "data" => ["type" => "changeTextSizeResult", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-    }
-
-    public function changeFont(Request $request)
-    {
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        $template = json_decode($jsonApiAttributes->template_json);
-        $sceneProperty = $jsonApiAttributes->sceneProperty;
-
-        $font = $jsonApiAttributes->font;
-        $style = $jsonApiAttributes->style;
-        $italic = $jsonApiAttributes->italic;
-
-
-        $configurations = new Configurations();
-
-        $configurations =  $configurations->ChangeFont($template,$sceneProperty,$font,$style,$italic);
-
-        $result = json_encode($configurations);
-
-
-
-
-        return response()->json([
-            "data" => ["type" => "changeFontResult", "attributes" => ["title" => "Success", "desc" => $result]]
-        ],200);
-    }
-
-    public function DeleteScene(Request $request){
-
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        //$template = json_decode($jsonApiAttributes->template_json);
-        $sceneToDelete = $jsonApiAttributes->sceneToDelete;
-
-
-        $duplicated = new SceneConfigurations();
-
-        $duplicated =  $duplicated->delete($jsonApiAttributes->template_json,$sceneToDelete);
-
-        $result = json_encode($duplicated[0]);
-        $difTime = $duplicated[1];
-
-        return response()->json([
-            "data" => ["type" => "deleteResult", "attributes" => ["title" => "Success", "desc" => [$result,$difTime]]]
-        ],200);
-    }
-
-    public function Duplicate(Request $request){
-
-
-        $jsonApiAttributes = (json_decode($request->getContent())->data->attributes);
-
-        //$template = json_decode($jsonApiAttributes->template_json);
-
-
-//        return response()->json([
-//            "data" => ["type" => "alon", "attributes" => ["title" => "Success", "desc" => $template->layers[0]->nm]]
-//        ],200);
-
-        $name = $jsonApiAttributes->scene_name;
-
-        $duplicated = new SceneConfigurations();
-
-        //$template = json_decode($jsonApiAttributes->template_json);
-
-        $duplicated =  $duplicated->duplicate($jsonApiAttributes->template_json,$name);
-
-        //dd($duplicated);
-        $result = \GuzzleHttp\json_encode($duplicated[0]);
-        $diffTime = $duplicated[1];
-        $copiedSceneIndex = $duplicated[2];
-        //dd($duplicated);
-
-        return response()->json([
-            "data" => ["type" => "duplicateResult", "attributes" => ["title" => "Success", "desc" => [$result,$diffTime,$copiedSceneIndex]]]
-        ],200);
-
-
-
-
-    }
-
-
-    public function createUserVideo(Request $request)
-    {
-
-        $token = (new Parser())->parse((string)$request->jwt);
-
-        $id = $token->getClaim("uid");
-
-
-        $json = Json::decode($request->getContent());
-
-
-        $jsonApiAttributes = Json::getAttributes($json);
-        foreach ($this->props as $k => $v) {
-            // request fields should match Middleware fields
-            if (isset($jsonApiAttributes[$k])) {
-                $this->model->$k = $jsonApiAttributes[$k];
-            }
-        }
-
-//TODO add funny phrase for email already taken
-
-
-        $this->model->guid = str_random(4).time().str_random(8);
-        $this->model->user_id = $id;
-
-
-        $this->model->save();
-//            $this->model = $model;
-//            unset($this->model->password);
-//        }
-        $this->setRelationships($json, $this->model->id);
-        $resource = Json::getResource($this->middleWare, $this->model, $this->entity);
-//        Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_CREATED);
-
-        return response()->json([
-            "data" => ["type" => "userVideos", "attributes" => ["title" => "Success", "desc" =>  $this->model->guid]]
-        ],200);
-
-
-    }
 
     public function createUser(Request $request)
     {
@@ -1342,12 +588,10 @@ trait BaseControllerTrait
      *
      * @param Request $request
      */
-    public function index(Request $request)
+    public function index(Request $request,$newSqlOptions=null)
     {
-//        if($request->jwt)
-//        $filter = ($request->input(ModelsInterface::PARAM_FILTER) === null) ? [] : Json::decode($request->input(ModelsInterface::PARAM_FILTER));
-//dd($filter);
-        $sqlOptions = $this->setSqlOptions($request);
+
+        $newSqlOptions!=null?$sqlOptions = $newSqlOptions:$sqlOptions=$this->setSqlOptions($request);
         $items = $this->getAllEntities($sqlOptions);
         $resource = Json::getResource($this->middleWare, $items, $this->entity, true);
         Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_OK, $sqlOptions->getData());
@@ -1359,12 +603,12 @@ trait BaseControllerTrait
      * @param Request $request
      * @param int $id
      */
-    public function view(Request $request, int $id)
+    public function view(Request $request,int $id, $sqlOptions=null)
     {
 
         $data = ($request->input(ModelsInterface::PARAM_DATA) === null) ? ModelsInterface::DEFAULT_DATA
             : json_decode(urldecode($request->input(ModelsInterface::PARAM_DATA)), true);
-        $item = $this->getEntity($id, $data);
+        $sqlOptions!=null?$item = $this->getAllEntities($sqlOptions):$item= $this->getEntity($id, $data);
         $resource = Json::getResource($this->middleWare, $item, $this->entity);
         Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_OK, $data);
     }
@@ -1374,13 +618,28 @@ trait BaseControllerTrait
      *
      * @param Request $request
      */
-    public function create(Request $request, bool $returnJSon = true)
+
+    public function addOrUpdateAttributes($jsonApiAttributes,$attributes)
+    {
+        foreach($attributes as $key=>$value)
+        {
+            $jsonApiAttributes[$key] = $value;
+        }
+
+        return $jsonApiAttributes;
+    }
+
+
+    //alonn
+    public function create(Request $request,$attributes=null,bool $returnJSon = true)
     {
 
 
         $json = Json::decode($request->getContent());
 
         $jsonApiAttributes = Json::getAttributes($json);
+        $attributes!=null&&$jsonApiAttributes = $this->addOrUpdateAttributes($jsonApiAttributes,$attributes);
+
         foreach($this->props as $k => $v)
         {
             // request fields should match Middleware fields
@@ -1404,25 +663,8 @@ trait BaseControllerTrait
 
                 $this->model->user_id = $token->getClaim("uid");
             }
-            else{
 
-                if ($jsonApiAttributes["user_id"]){
-                    Json::outputErrors(
-                        [
-                            [
-                                JSONApiInterface::ERROR_TITLE  => 'user_id should not be sent',
-                                JSONApiInterface::ERROR_DETAIL => 'send jwt text instead',
-                            ],
-                        ]
-                    );
-                }
-            }
         }
-//        return response()->json($this,401);
-//        return response()->json([
-//            "data" => [$this->model]
-//        ],401);
-//        dd($this);
 
         $this->model->save();
 
@@ -1468,12 +710,15 @@ trait BaseControllerTrait
      * @param Request $request
      * @param int $id
      */
-    public function update(Request $request, int $id)
+    public function update(Request $request,int $id,$sqlOptions=null )
     {
         // get json raw input and parse attrs
         $json = Json::decode($request->getContent());
         $jsonApiAttributes = Json::getAttributes($json);
-        $model = $this->getEntity($id);
+        $sqlOptions!=null?$model = $this->getAllEntities($sqlOptions)[0]:$model= $this->getEntity($id);
+
+
+        //$model = $this->getEntity($id);
         // jwt
         if($this->configOptions->getIsJwtAction() === true && (bool)$jsonApiAttributes[JwtInterface::JWT] === true)
         {
@@ -1494,14 +739,12 @@ trait BaseControllerTrait
         }
         else
         { // standard processing
-            foreach($this->props as $k => $v)
-            {
-                // request fields should match Middleware fields
-                if(empty($jsonApiAttributes[$k]) === false)
-                {
-                    $model->$k = $jsonApiAttributes[$k];
-                }
+
+            foreach($jsonApiAttributes as $k => $v){
+                $model->$k = $jsonApiAttributes[$k];
             }
+
+
         }
 
         $model->save();
@@ -1850,132 +1093,71 @@ trait BaseControllerTrait
         }
     }
 
-    public function createGallery(Request $request)
-    {
-
-        $token = (new Parser())->parse((string)$request->jwt);
-
-        $id = $token->getClaim("uid");
-
-
-
-
-        $json = Json::decode($request->getContent());
-        $url = (Json::getAttributes($json)["url"]);
-
-
-
-        $jsonApiAttributes = Json::getAttributes($json);
-        foreach ($this->props as $k => $v) {
-            // request fields should match Middleware fields
-            if (isset($jsonApiAttributes[$k])) {
-                $this->model->$k = $jsonApiAttributes[$k];
-            }
-        }
-
-
-        $this->model->uid = $id;
-
-        // $this->galleryTags($this->model);
-
-
-        putenv('GOOGLE_APPLICATION_CREDENTIALS='.storage_path('app/VidBox-Vision-92b2c7b596a3.json'));
-
-
-
-        $vision = new VisionClient([
-            'projectId' => 'vidbox-vision']);
-
-
-        $image = $vision->image($url, [
-            'LABEL_DETECTION'
-        ]);
-
-        $labels = $vision->annotate($image)->labels();
-
-        //dd($labels);
-        $tags ='';
-
-        foreach ($labels as $label)
-        {
-
-            $tags == '' ?$tags=$label->info()["description"]: $tags= $tags.','.$label->info()["description"];
-        }
-
-
-        $this->model->tags = $tags;
-        $this->model->save();
-
-
-        //dispatch((new UpdateTag)->handle( $this->model));//$this->galleryTags($this->model)));
-
-        //$job = (new UpdateTag())
-        //  ->delay(Carbon::now()->addMinutes(10));
-
-        //dispatch($job);
-
-        // $client = new Client();
-
-
+//    public function createGallery(Request $request)
+//    {
 //
-
-//            $request = $client->requestAsync('POST', 'http://127.0.0.1:8093/v1/gallery/tags',[
-//                'model'=>$this->model,
-//            ])->then(function ($response) {
-//                echo 'I completed! ' . $response->getBody();
-//            });;
-//       // $request->wait();
-//        dd($request);
-
-
-        // $request = new \GuzzleHttp\Psr7\Request('GET', 'http://127.0.0.1:8096/v1/gallery/tags');
-//     $promise=[ 'test'=> $client->postAsync('http://127.0.0.1:8104/v1/gallery/tags?id='.$this->model->id)];
+//        $token = (new Parser())->parse((string)$request->jwt);
 //
-//        $results = Promise\unwrap($promise);
-//        dd($results);
-
-        // dd($promise->wait(false));
-
-
-//        while (!Promise\is_rejected($promise)) {
-//          dd($promise);
-//            // It won't hog the processor because it uses `curl_multi_select`; no need to sleep here.
+//        $id = $token->getClaim("uid");
+//
+//
+//
+//
+//        $json = Json::decode($request->getContent());
+//        $url = (Json::getAttributes($json)["url"]);
+//
+//
+//
+//        $jsonApiAttributes = Json::getAttributes($json);
+//        foreach ($this->props as $k => $v) {
+//            // request fields should match Middleware fields
+//            if (isset($jsonApiAttributes[$k])) {
+//                $this->model->$k = $jsonApiAttributes[$k];
+//            }
 //        }
-        // dd($promise);
-        //$promise->then();
-        //$promise->wait();
-
-//        $request = new \GuzzleHttp\Psr7\Request('POST', 'http://127.0.0.1:8000/v1/gallery/tags',
-//            [],
-//            new \GuzzleHttp\Psr7\Request([
-//                [
-//                    'name' => 'fileUpload',
 //
-//                ],
-//            ]));
-
-        //$promises = $client->send($request);
-
-
-
-
-        //$this->galleryTags($this->model)->delay(Carbon::now()->addMinutes(1));
-
-
-        $this->setRelationships($json, $this->model->id);
-        $resource = Json::getResource($this->middleWare, $this->model, $this->entity);
-        Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_CREATED);
-
-
-        return response()->json([
-            "data" => ["type" => "gallery", "attributes" => ["title" => "Success", "desc" =>  $resource]]
-        ],200);
-
-
-
-
-
-    }
+//
+//        $this->model->uid = $id;
+//
+//
+//        putenv('GOOGLE_APPLICATION_CREDENTIALS='.storage_path('app/VidBox-Vision-92b2c7b596a3.json'));
+//
+//
+//
+//        $vision = new VisionClient([
+//            'projectId' => 'vidbox-vision']);
+//
+//
+//        $image = $vision->image($url, [
+//            'LABEL_DETECTION'
+//        ]);
+//
+//        $labels = $vision->annotate($image)->labels();
+//
+//        //dd($labels);
+//        $tags ='';
+//
+//        foreach ($labels as $label)
+//        {
+//
+//            $tags == '' ?$tags=$label->info()["description"]: $tags= $tags.','.$label->info()["description"];
+//        }
+//
+//
+//        $this->model->tags = $tags;
+//        $this->model->save();
+//
+//
+//        $this->setRelationships($json, $this->model->id);
+//        $resource = Json::getResource($this->middleWare, $this->model, $this->entity);
+//        Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_CREATED);
+//
+//
+//        return response()->json([
+//            "data" => ["type" => "gallery", "attributes" => ["title" => "Success", "desc" =>  $resource]]
+//        ],200);
+//
+//    }
 
     public function galleryTags(Request $request)
     {
