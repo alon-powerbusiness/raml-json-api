@@ -580,7 +580,7 @@ trait BaseControllerTrait
         $resource = Json::getResource($this->middleWare, $this->model, $this->entity);
         Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_CREATED);
 
-
+//
     }
 
     /**
