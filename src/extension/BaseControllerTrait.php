@@ -588,13 +588,23 @@ trait BaseControllerTrait
      *
      * @param Request $request
      */
-    public function index(Request $request,$newSqlOptions=null)
+    public function index(Request $request,$newSqlOptions=null,$returnJSon=true)
     {
 
         $newSqlOptions!=null?$sqlOptions = $newSqlOptions:$sqlOptions=$this->setSqlOptions($request);
         $items = $this->getAllEntities($sqlOptions);
         $resource = Json::getResource($this->middleWare, $items, $this->entity, true);
-        Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_OK, $sqlOptions->getData());
+
+        if ($returnJSon){
+            Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_CREATED);
+        }
+        else
+        {
+            return($this->model);
+        }
+
+//        Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_OK, $sqlOptions->getData());
+
     }
 
     /**
