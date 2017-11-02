@@ -131,6 +131,7 @@ trait BaseControllerTrait
         $this->middleware('guest');
         $this->activationService = $activationService;
         $this->activationRepo = $activationRepository;
+        $this->imagesList = [];
 
 
         // add relations to json api methods array
@@ -291,103 +292,7 @@ trait BaseControllerTrait
     }
 
 
-    public function getRenderActiveQueueCount(Request $request)
-    {
 
-//        if ($request->jwt) {
-        $sqlOptions = $this->setSqlOptions($request);
-//            $token = (new Parser())->parse((string)$request->jwt);
-
-
-
-//            $this->model->user_id = $token->getClaim("uid");
-
-        $filter=[['status','>', 0],['status','<',6]];
-
-        //$data=["id","user_id","template_id","include.title","include.input_view","include.thumbnail_url"];
-
-
-        $sqlOptions->setFilter($filter);
-        //$sqlOptions->setData($data);
-
-
-
-        $items = $this->getAllEntities($sqlOptions);
-
-
-        if (count($items) < 2) {
-            $filter=[['status','=', 0]];
-            $sortby = ['id'=>'asc'];
-
-//            dd($sortby);
-//            dd(Json::decode($request->input(ModelsInterface::PARAM_ORDER_BY)));
-
-            $sqlOptions->setFilter($filter);
-            $sqlOptions->setLimit(1);
-            $sqlOptions->setOrderBy($sortby);
-
-
-            $status = 0;
-            $status_text ='ready to render';
-            $items = $this->getAllEntities($sqlOptions);
-        }
-        else
-        {
-            $status = 1;
-            $status_text ='render in process';
-        }
-        //$resource = Json::getResource($this->middleWare, $items, $this->entity, true);
-
-
-        // dd($items);
-        return response()->json([
-
-            "count" => count($items),
-            "items" => $items,
-            "status" => $status,
-            "status_text"=>$status_text
-
-
-        ]);
-
-
-
-        //return response(count($items));
-
-
-//            Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_OK, $sqlOptions->getData());
-
-//        } else {
-//            return response()->json([
-//                "data" => ["type" => "error", "attributes" => ["title" => "Error", "desc" => "Email or Password is invalid."]]
-//            ], 401);
-
-//        }
-    }
-
-
-    //get duration for active queue render
-    public function getRenderActiveAndQueueDurationSum(Request $request)
-    {
-
-        $sqlOptions = $this->setSqlOptions($request);
-
-
-        $filter=[['status','>=', 0],['status','<',6]];
-
-        $data=["duration_fps"];
-
-
-        $sqlOptions->setFilter($filter);
-        $sqlOptions->setData($data);
-
-
-
-        $items = $this->getAllEntities($sqlOptions)->sum('duration_fps');
-
-        return $items;
-
-    }
 
 
     public function updateQueuePhantomJSCount(Request $request)
@@ -580,7 +485,7 @@ trait BaseControllerTrait
         $resource = Json::getResource($this->middleWare, $this->model, $this->entity);
         Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_CREATED);
 
-//
+
     }
 
     /**
@@ -594,7 +499,6 @@ trait BaseControllerTrait
         $newSqlOptions!=null?$sqlOptions = $newSqlOptions:$sqlOptions=$this->setSqlOptions($request);
         $items = $this->getAllEntities($sqlOptions);
         $resource = Json::getResource($this->middleWare, $items, $this->entity, true);
-
         if ($returnJSon){
             Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_CREATED);
         }
@@ -603,7 +507,6 @@ trait BaseControllerTrait
             return($this->model);
         }
 
-//        Json::outputSerializedData($resource, JSONApiInterface::HTTP_RESPONSE_CODE_OK, $sqlOptions->getData());
 
     }
 
